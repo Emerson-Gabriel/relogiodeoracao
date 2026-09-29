@@ -136,7 +136,7 @@ function occupied_slots(int $eventId): array
 /** Para a área administrativa: nomes agrupados por bloco. */
 function signups_by_slot(int $eventId): array
 {
-    $stmt = db()->prepare('SELECT slot_start, name, created_at FROM signups WHERE event_id = ? ORDER BY slot_start, id');
+    $stmt = db()->prepare('SELECT id, slot_start, name, created_at FROM signups WHERE event_id = ? ORDER BY slot_start, id');
     $stmt->execute([$eventId]);
     $out = [];
     foreach ($stmt->fetchAll() as $row) {
@@ -157,6 +157,18 @@ function create_signup(int $eventId, string $slotStart, string $name, string $su
          VALUES (?, ?, ?, ?, ?) ON CONFLICT(submission_token) DO NOTHING'
     );
     $stmt->execute([$eventId, $slotStart, $name, $submissionToken, now()]);
+}
+
+function find_signup_by_id(int $id): ?array
+{
+    $stmt = db()->prepare('SELECT * FROM signups WHERE id = ?');
+    $stmt->execute([$id]);
+    return $stmt->fetch() ?: null;
+}
+
+function delete_signup(int $id): void
+{
+    db()->prepare('DELETE FROM signups WHERE id = ?')->execute([$id]);
 }
 
 function find_signup_by_submission(int $eventId, string $submissionToken): ?array

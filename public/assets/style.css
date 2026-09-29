@@ -130,6 +130,7 @@ input:focus-visible { border-color: var(--primary); }
 .button.is-loading { opacity: .75; cursor: progress; }
 .link-button { background: none; border: 0; padding: 0; font: inherit; text-decoration: underline; cursor: pointer; }
 form.inline { display: inline; }
+.link-button.danger { color: var(--error-text); font-size: .875rem; margin-left: .5rem; }
 .actions { display: flex; flex-wrap: wrap; gap: .5rem; margin: 1rem 0 0; }
 
 /* Página pública */

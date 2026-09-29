@@ -1,12 +1,6 @@
 <?php /** @var array $events @var array $errors @var array $old */ ?>
 <h1>Relógio de Oração — Administração</h1>
 
-<?php if (!admin_password_enabled()): ?>
-<div class="alert alert-warning">
-    <strong>Atenção:</strong> esta área não está protegida. Qualquer pessoa que souber o endereço <code>/admin</code> pode ver os nomes e cadastrar relógios.
-    Defina um código de acesso (<code>admin_password</code> em <code>config.php</code>) antes de publicar na internet.
-</div>
-<?php endif; ?>
 
 <section class="card">
     <h2>Cadastrar novo relógio</h2>

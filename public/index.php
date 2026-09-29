@@ -117,6 +117,13 @@ function admin_route(string $method, string $path): void
 {
     start_session();
 
+    // Sem código de acesso configurado, a área administrativa fica bloqueada
+    // (evita expor os nomes caso alguém esqueça de criar o config.php).
+    if (!admin_password_enabled()) {
+        render('admin_setup', ['title' => 'Configure o código de acesso', 'noindex' => true], 503);
+        return;
+    }
+
     if ($path === '/admin/entrar') {
         admin_login($method);
         return;
@@ -150,6 +157,13 @@ function admin_route(string $method, string $path): void
         flash('Relógio de oração cadastrado. Copie o link público abaixo e compartilhe.');
         redirect('/admin/eventos/' . $event['id']);
     }
+    if (preg_match('#^/admin/inscricoes/(\d+)/excluir$#', $path, $m) && $method === 'POST') {
+        verify_csrf();
+        $signup = find_signup_by_id((int) $m[1]) ?? not_found();
+        delete_signup((int) $signup['id']);
+        flash('Inscrição de “' . $signup['name'] . '” (' . $signup['slot_start'] . ') excluída.');
+        redirect('/admin/eventos/' . $signup['event_id']);
+    }
     if (preg_match('#^/admin/eventos/(\d+)$#', $path, $m) && $method === 'GET') {
         $event = find_event_by_id((int) $m[1]) ?? not_found();
         render('admin_event', [
@@ -181,7 +195,7 @@ function admin_index(array $errors = [], array $old = []): void
 
 function admin_login(string $method): void
 {
-    if (!admin_password_enabled() || admin_is_authenticated()) {
+    if (admin_is_authenticated()) {
         redirect('/admin');
     }
     $error = null;

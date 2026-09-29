@@ -17,6 +17,15 @@
         });
     });
 
+    // Pede confirmação antes de ações irreversíveis (ex.: excluir inscrição).
+    document.querySelectorAll('form[data-confirm]').forEach(function (form) {
+        form.addEventListener('submit', function (ev) {
+            if (!window.confirm(form.getAttribute('data-confirm'))) {
+                ev.preventDefault();
+            }
+        });
+    });
+
     // Ao voltar pelo histórico, recarrega para mostrar a situação atualizada dos horários.
     window.addEventListener('pageshow', function (ev) {
         if (ev.persisted && document.querySelector('form[data-once]')) {

@@ -185,14 +185,14 @@ function admin_password_enabled(): bool
 
 function admin_is_authenticated(): bool
 {
-    return !admin_password_enabled() || !empty($_SESSION['admin']);
+    return admin_password_enabled() && !empty($_SESSION['admin']);
 }
 
 function check_admin_password(string $attempt): bool
 {
     $expected = (string) config('admin_password', '');
     if ($expected === '') {
-        return true;
+        return false;
     }
     // Aceita tanto texto puro quanto um hash gerado por password_hash().
     if (str_starts_with($expected, '$2y$') || str_starts_with($expected, '$argon2')) {

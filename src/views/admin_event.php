@@ -40,7 +40,13 @@ $shareText = 'Relógio de Oração — ' . format_date_long($event['date']) . ',
 <?php if ($people): ?>
                     <ol>
 <?php foreach ($people as $p): ?>
-                        <li><?= e($p['name']) ?></li>
+                        <li>
+                            <span class="person"><?= e($p['name']) ?></span>
+                            <form method="post" action="<?= e(url('/admin/inscricoes/' . $p['id'] . '/excluir')) ?>" class="inline" data-confirm="Excluir a inscrição de <?= e($p['name']) ?> (<?= e($slot['start']) ?>)?">
+                                <?= csrf_field() ?>
+                                <button type="submit" class="link-button danger" aria-label="Excluir inscrição de <?= e($p['name']) ?>">excluir</button>
+                            </form>
+                        </li>
 <?php endforeach; ?>
                     </ol>
 <?php else: ?>

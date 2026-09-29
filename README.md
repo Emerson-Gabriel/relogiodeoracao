@@ -28,11 +28,9 @@ A especificação completa está em [`docs/ESPECIFICACAO.md`](docs/ESPECIFICACAO
 - **Concorrência:** inscrições são apenas `INSERT`, sem ler, alterar e gravar de volta, então nunca sobrescrevem outra. O teste automatizado dispara 10 inscrições simultâneas.
 - **Privacidade:** o HTML público recebe apenas a lista de horários ocupados, sem nomes, contagem ou qualquer outro dado, nem mesmo escondidos. A página de confirmação mostra o nome da própria pessoa, e seu endereço contém um código aleatório que só quem se inscreveu conhece. As páginas levam `noindex` para não aparecer no Google.
 
-## ⚠️ Segurança da área `/admin`
+## Segurança da área `/admin`
 
-Por padrão, conforme a especificação, **o `/admin` não pede login**. Isso significa que **qualquer pessoa que descobrir o endereço `/admin` consegue ver os nomes de todos os inscritos e cadastrar relógios**. A própria tela do admin mostra esse aviso enquanto a área estiver aberta.
-
-**Recomendação:** antes de publicar na internet, defina um **código de acesso**. É uma única senha compartilhada pela organização, sem cadastro de usuários:
+A especificação previa um `/admin` sem login. Isso deixaria os nomes de todos os inscritos visíveis para qualquer pessoa que descobrisse o endereço. Por isso a aplicação usa um **código de acesso**: uma única senha compartilhada pela organização, sem cadastro de usuários. **Enquanto o código não for configurado, o `/admin` fica bloqueado** e mostra instruções. Assim, esquecer o `config.php` nunca deixa os nomes expostos.
 
 ```php
 // config.php
@@ -59,15 +57,19 @@ Com o código definido, o `/admin` pede o código uma vez por sessão do navegad
 
 **O que depende de você (maior risco real):** senha forte e 2FA no cPanel/HostGator, não compartilhar acesso FTP, manter o PHP atualizado no MultiPHP Manager e usar HTTPS.
 
+## Excluir inscrições
+
+Na tela de cada relógio no admin, cada nome tem o link **excluir**, para remover inscrições falsas ou duplicadas. O sistema pede confirmação antes de apagar. Se o horário ficar vazio, ele volta a aparecer como **Disponível** na página pública.
+
 ## Como executar localmente
 
 Requisitos: PHP 8.1 ou superior com `pdo_sqlite` e `mbstring`.
 
 ```bash
-php -S localhost:8000 -t public public/index.php
+RELOGIO_ADMIN_PASSWORD=teste php -S localhost:8000 -t public public/index.php
 ```
 
-- Administração: http://localhost:8000/admin
+- Administração: http://localhost:8000/admin (código: `teste`)
 - O banco `data/relogio.sqlite` é criado automaticamente.
 
 ## Testes

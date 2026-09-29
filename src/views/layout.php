@@ -21,7 +21,7 @@
 <?php if (!empty($admin)): ?>
             <nav class="admin-nav" aria-label="Administração">
                 <a href="<?= e(url('/admin')) ?>">Relógios cadastrados</a>
-<?php if (admin_password_enabled()): ?>
+<?php if (admin_is_authenticated()): ?>
                 <form method="post" action="<?= e(url('/admin/sair')) ?>" class="inline">
                     <?= csrf_field() ?>
                     <button type="submit" class="link-button">Sair</button>
