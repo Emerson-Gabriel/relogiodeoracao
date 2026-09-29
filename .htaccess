@@ -1,0 +1,9 @@
+# Para hospedagens em que não é possível apontar a raiz do site para /public:
+# redireciona tudo para a pasta public e bloqueia o acesso a src/, data/, config.php etc.
+Options -Indexes
+<IfModule mod_rewrite.c>
+    RewriteEngine On
+    RewriteRule ^(src|data|tests|docs)(/|$) - [F,L]
+    RewriteRule ^config(\.example)?\.php$ - [F,L]
+    RewriteRule ^(?!public/)(.*)$ public/$1 [L]
+</IfModule>
