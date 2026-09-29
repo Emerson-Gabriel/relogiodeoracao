@@ -9,6 +9,10 @@ return [
     // Endereço público do site, usado para montar o link compartilhável. Ex.: 'https://oracao.suaigreja.com.br'
     'app_url' => 'https://oracao.omnibyte.com.br',
 
+    // Máximo de inscrições por conexão (IP) a cada 10 minutos. Protege contra spam.
+    // Fica alto porque muita gente pode se inscrever pelo mesmo Wi-Fi da igreja.
+    // 'signup_limit' => 40,
+
     // Caminho do arquivo SQLite (padrão: data/relogio.sqlite). Deve ficar fora da pasta public.
     // 'db_path' => __DIR__ . '/data/relogio.sqlite',
 ];

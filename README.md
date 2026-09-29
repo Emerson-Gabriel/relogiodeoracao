@@ -44,7 +44,20 @@ return [
 Com o código definido, o `/admin` pede o código uma vez por sessão do navegador. Também é possível guardar um hash no lugar do texto puro:
 `php -r "echo password_hash('seu-codigo', PASSWORD_DEFAULT);"`.
 
-Outras proteções já incluídas: CSRF nos formulários do admin, cabeçalhos de segurança (CSP, `X-Frame-Options`), escape de todo conteúdo exibido, e bloqueio do acesso direto a `data/`, `src/` e `config.php`. Use **HTTPS** na hospedagem.
+### Proteções contra invasão e abuso
+
+- **Não existe upload de arquivos.** A aplicação só recebe texto (nome, horário, data), então não há como enviar um script por ela.
+- **Nenhum outro PHP é executado:** o `.htaccess` recusa (403) qualquer `.php` que não seja o `index.php`, mesmo que alguém consiga colocar um arquivo na pasta.
+- **Banco, configuração e código inacessíveis pela web:** `data/`, `src/`, `config.php`, `tests/`, `.git` e arquivos ocultos ficam fora da raiz pública ou bloqueados pelo `.htaccess`. Isso foi testado num Apache real, nos dois modos de instalação.
+- **Injeção de SQL:** todas as consultas usam parâmetros (PDO com prepared statements).
+- **XSS:** tudo que é exibido é escapado, e a CSP só permite scripts do próprio site.
+- **Força bruta no código de acesso:** 5 tentativas erradas bloqueiam aquela conexão por 15 minutos.
+- **Spam de inscrições:** limite de 40 inscrições por conexão a cada 10 minutos, ajustável em `signup_limit`. O limite é alto porque muitos podem usar o mesmo Wi-Fi da igreja.
+- **Formulários enviados de outros sites** são recusados, e os formulários do admin têm CSRF.
+- **Erros do PHP não aparecem ao visitante;** vão só para o log do servidor.
+- Cabeçalhos de segurança: CSP, `X-Frame-Options`, `Referrer-Policy`, `Permissions-Policy` e HSTS com HTTPS.
+
+**O que depende de você (maior risco real):** senha forte e 2FA no cPanel/HostGator, não compartilhar acesso FTP, manter o PHP atualizado no MultiPHP Manager e usar HTTPS.
 
 ## Como executar localmente
 

@@ -70,6 +70,15 @@ function public_event(array $event, array $errors = [], array $old = []): void
 
 function public_signup(array $event): void
 {
+    if (!same_origin_request()) {
+        render_error(403, 'Envio não permitido', 'Abra o link do relógio de oração e faça a inscrição pela própria página.');
+        return;
+    }
+    if (attempts_exceeded('signup', (int) config('signup_limit', 40), 600)) {
+        render_error(429, 'Muitas inscrições seguidas', 'Foram feitas muitas inscrições a partir desta conexão nos últimos minutos. Aguarde um pouco e tente novamente.');
+        return;
+    }
+
     $name = normalize_name((string) ($_POST['nome'] ?? ''));
     $slot = normalize_time((string) ($_POST['horario'] ?? ''));
     $submission = (string) ($_POST['envio'] ?? '');
@@ -96,6 +105,7 @@ function public_signup(array $event): void
     if ($existing && ($existing['slot_start'] !== $slot || $existing['name'] !== $name)) {
         $submission = random_token(16);
     }
+    record_attempt('signup');
     create_signup((int) $event['id'], $slot, $name, $submission);
 
     redirect('/r/' . $event['public_token'] . '/confirmacao/' . $submission);
@@ -175,6 +185,11 @@ function admin_login(string $method): void
         redirect('/admin');
     }
     $error = null;
+    if ($method === 'POST' && attempts_exceeded('login', 5, 900)) {
+        $error = 'Muitas tentativas erradas. Aguarde 15 minutos e tente novamente.';
+        render('admin_login', ['title' => 'Entrar — Administração', 'error' => $error, 'noindex' => true], 429);
+        return;
+    }
     if ($method === 'POST') {
         verify_csrf();
         if (check_admin_password((string) ($_POST['codigo'] ?? ''))) {
@@ -182,6 +197,7 @@ function admin_login(string $method): void
             $_SESSION['admin'] = true;
             redirect('/admin');
         }
+        record_attempt('login');
         usleep(500_000); // atrasa tentativas por força bruta
         $error = 'Código de acesso incorreto.';
     }

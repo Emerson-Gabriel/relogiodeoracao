@@ -96,11 +96,28 @@ function redirect(string $path): never
     exit;
 }
 
+/**
+ * Recusa envios de formulário feitos a partir de outros sites. Navegadores
+ * informam a origem no cabeçalho Origin; sem ele (navegadores antigos), aceita.
+ */
+function same_origin_request(): bool
+{
+    $origin = $_SERVER['HTTP_ORIGIN'] ?? '';
+    if ($origin === '' || $origin === 'null') {
+        return true;
+    }
+    return strcasecmp((string) parse_url($origin, PHP_URL_HOST) . (parse_url($origin, PHP_URL_PORT) ? ':' . parse_url($origin, PHP_URL_PORT) : ''), (string) ($_SERVER['HTTP_HOST'] ?? '')) === 0;
+}
+
 function send_security_headers(): void
 {
     header('X-Content-Type-Options: nosniff');
     header('X-Frame-Options: DENY');
     header('Referrer-Policy: no-referrer');
+    header('Permissions-Policy: camera=(), microphone=(), geolocation=()');
+    if (($_SERVER['HTTPS'] ?? '') === 'on') {
+        header('Strict-Transport-Security: max-age=31536000');
+    }
     header("Content-Security-Policy: default-src 'self'; img-src 'self' data:; style-src 'self'; script-src 'self'; form-action 'self'; frame-ancestors 'none'; base-uri 'none'");
 }
 

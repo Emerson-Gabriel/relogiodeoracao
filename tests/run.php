@@ -9,7 +9,7 @@ declare(strict_types=1);
  *   temporário e percorre os fluxos de administração e inscrição pública.
  */
 
-require dirname(__DIR__) . '/src/functions.php';
+require_once dirname(__DIR__) . '/src/functions.php';
 
 $failures = 0;
 $count = 0;
@@ -64,10 +64,10 @@ echo "\nFluxos de ponta a ponta\n";
 $tmp = sys_get_temp_dir() . '/relogio-test-' . bin2hex(random_bytes(4));
 mkdir($tmp);
 
-function start_server(string $db, string $password = ''): array
+function start_server(string $db, string $password = '', array $extraEnv = []): array
 {
     $port = random_int(20000, 40000);
-    $env = array_merge(getenv(), ['RELOGIO_DB_PATH' => $db, 'RELOGIO_ADMIN_PASSWORD' => $password, 'RELOGIO_APP_URL' => '']);
+    $env = array_merge(getenv(), ['RELOGIO_DB_PATH' => $db, 'RELOGIO_ADMIN_PASSWORD' => $password, 'RELOGIO_APP_URL' => ''], $extraEnv);
     $root = dirname(__DIR__) . '/public';
     $proc = proc_open([PHP_BINARY, '-S', "127.0.0.1:{$port}", '-t', $root, $root . '/index.php'], [1 => ['file', '/dev/null', 'w'], 2 => ['file', '/dev/null', 'w']], $pipes, null, $env);
     for ($i = 0; $i < 50; $i++) {
@@ -80,9 +80,9 @@ function start_server(string $db, string $password = ''): array
 }
 
 /** Cliente HTTP mínimo com cookies. Retorna [status, headers, body]. */
-function http(string $method, string $url, array $form = [], array &$cookies = []): array
+function http(string $method, string $url, array $form = [], array &$cookies = [], array $extraHeaders = []): array
 {
-    $headers = [];
+    $headers = $extraHeaders;
     if ($cookies) {
         $headers[] = 'Cookie: ' . implode('; ', array_map(fn ($k, $v) => "{$k}={$v}", array_keys($cookies), $cookies));
     }
@@ -219,6 +219,42 @@ try {
 
     [$st, $h, $html] = http('GET', "$base/assets/style.css");
     check($st === 200, 'arquivos estáticos são servidos');
+} finally {
+    proc_terminate($proc);
+    proc_close($proc);
+}
+
+// Proteções contra abuso.
+[$proc, $base] = start_server($tmp . '/db3.sqlite', 'segredo123', ['RELOGIO_SIGNUP_LIMIT' => '3']);
+try {
+    $jar = [];
+    [, , $html] = http('GET', "$base/admin/entrar", [], $jar);
+    $csrf = csrf_from($html);
+    for ($i = 0; $i < 5; $i++) {
+        http('POST', "$base/admin/entrar", ['_csrf' => $csrf, 'codigo' => 'errado' . $i], $jar);
+    }
+    [$st] = http('POST', "$base/admin/entrar", ['_csrf' => $csrf, 'codigo' => 'segredo123'], $jar);
+    check($st === 429, 'após 5 códigos errados, o /admin bloqueia novas tentativas');
+
+    // Cria um evento direto no banco para testar a página pública.
+    putenv('RELOGIO_DB_PATH=' . $tmp . '/db3.sqlite');
+    require_once dirname(__DIR__) . '/src/bootstrap.php';
+    $ev = create_event('2026-10-02', '07:00', '09:00');
+    $pub = "$base/r/{$ev['public_token']}";
+
+    [$st] = http('POST', $pub, ['nome' => 'Ana Souza', 'horario' => '07:00', 'envio' => random_token(16)], $jar, ['Origin: https://site-malicioso.example']);
+    check($st === 403, 'inscrição enviada a partir de outro site é recusada');
+    [$st] = http('POST', $pub, ['nome' => 'Ana Souza', 'horario' => '07:00', 'envio' => random_token(16)], $jar, ['Origin: ' . $base]);
+    check($st === 303, 'inscrição com Origin do próprio site é aceita');
+    http('POST', $pub, ['nome' => 'Bia Souza', 'horario' => '07:00', 'envio' => random_token(16)]);
+    http('POST', $pub, ['nome' => 'Caio Souza', 'horario' => '07:00', 'envio' => random_token(16)]);
+    [$st] = http('POST', $pub, ['nome' => 'Davi Souza', 'horario' => '07:00', 'envio' => random_token(16)]);
+    check($st === 429, 'excesso de inscrições da mesma conexão é bloqueado');
+
+    [, $h] = http('GET', $pub);
+    check(header_value($h, 'X-Frame-Options') === 'DENY' && str_contains((string) header_value($h, 'Content-Security-Policy'), "script-src 'self'"), 'cabeçalhos de segurança presentes');
+    [$st, , $html] = http('GET', "$base/r/../../config.php");
+    check($st === 404 && !str_contains($html, 'admin_password'), 'tentativa de acessar arquivos por ../ não funciona');
 } finally {
     proc_terminate($proc);
     proc_close($proc);
