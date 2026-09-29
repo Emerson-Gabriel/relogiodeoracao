@@ -65,7 +65,16 @@ php tests/run.php
 
 O script roda testes das regras (blocos, validações) e testes de ponta a ponta. Ele sobe o servidor com um banco temporário e verifica cadastro, link público, inscrição, várias pessoas no mesmo horário, duplo envio, concorrência, ausência de nomes no HTML público e o código de acesso. Os testes cobrem os critérios de aceite da especificação.
 
-## Publicação (hospedagem compartilhada com Apache)
+## Publicação na HostGator — `oracao.omnibyte.com.br`
+
+1. cPanel → **MultiPHP Manager**: PHP **8.1 ou mais novo** para o subdomínio.
+2. cPanel → **Domínios → Criar domínio**: `oracao.omnibyte.com.br`, com **Document Root** = `relogiodeoracao/public`.
+3. Envie o projeto (ZIP do GitHub → Gerenciador de Arquivos → Extrair) para `/home/<usuario>/relogiodeoracao`.
+4. Copie `config.example.php` para `config.php` e defina `admin_password` (o `app_url` já vem com `https://oracao.omnibyte.com.br`).
+5. cPanel → **SSL/TLS Status** → **Run AutoSSL** para ativar o HTTPS.
+6. Teste: `https://oracao.omnibyte.com.br/admin`.
+
+## Publicação (hospedagem compartilhada com Apache, genérica)
 
 1. Envie todos os arquivos do projeto para a hospedagem.
 2. Aponte a **raiz do site para a pasta `public/`** (recomendado). Se o painel não permitir, deixe na raiz: o `.htaccess` da raiz redireciona para `public/` e bloqueia as pastas internas.

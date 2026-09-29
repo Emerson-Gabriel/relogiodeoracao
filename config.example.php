@@ -7,7 +7,7 @@ return [
     'admin_password' => '',
 
     // Endereço público do site, usado para montar o link compartilhável. Ex.: 'https://oracao.suaigreja.com.br'
-    'app_url' => '',
+    'app_url' => 'https://oracao.omnibyte.com.br',
 
     // Caminho do arquivo SQLite (padrão: data/relogio.sqlite). Deve ficar fora da pasta public.
     // 'db_path' => __DIR__ . '/data/relogio.sqlite',
