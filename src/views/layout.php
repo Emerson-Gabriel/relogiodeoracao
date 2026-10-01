@@ -2,13 +2,14 @@
 <html lang="pt-BR">
 <head>
     <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
     <title><?= e($title ?? 'Relógio de Oração') ?></title>
 <?php if (!empty($noindex)): ?>
     <meta name="robots" content="noindex, nofollow">
 <?php endif; ?>
     <meta name="description" content="Relógio de Oração — IEADIP, Assembleia de Deus Madureira em Patrocínio/MG">
-    <meta name="theme-color" content="#1f3a5f">
+    <meta name="theme-color" content="#eef2f7">
+    <link rel="preload" href="<?= e(url('/assets/fonts/atkinson-hyperlegible-latin-400-normal.woff2')) ?>" as="font" type="font/woff2" crossorigin>
 <?php if (logo_url()): ?>
     <link rel="icon" href="<?= e(logo_url()) ?>" type="image/png">
     <link rel="apple-touch-icon" href="<?= e(logo_url()) ?>">
@@ -24,9 +25,9 @@
         <div class="container">
             <div class="brand">
 <?php if ($logo = logo_url()): ?>
-                <img src="<?= e($logo) ?>" alt="" class="brand-logo" width="44" height="44">
+                <img src="<?= e($logo) ?>" alt="" class="brand-logo" width="48" height="48">
 <?php endif; ?>
-                <p class="church">IEADIP · Assembleia de Deus Madureira · Patrocínio/MG</p>
+                <p class="church"><strong>Assembleia de Deus Madureira</strong><span>IEADIP, Patrocínio (MG)</span></p>
             </div>
 <?php if (!empty($admin)): ?>
             <nav class="admin-nav" aria-label="Administração">
@@ -46,7 +47,7 @@
     </main>
     <footer class="site-footer">
         <div class="container">
-            <p>“Orai sem cessar.” — 1 Tessalonicenses 5:17</p>
+            <p class="verse">“Orai sem cessar.”<cite>1 Tessalonicenses 5:17</cite></p>
         </div>
     </footer>
 </body>

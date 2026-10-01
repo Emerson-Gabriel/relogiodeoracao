@@ -4,15 +4,15 @@ $total = array_sum(array_map('count', $signups));
 $empty = count(array_filter($slots, fn ($s) => empty($signups[$s['start']])));
 $shareText = 'Relógio de Oração — ' . format_date_long($event['date']) . ', das ' . format_time($event['start_time']) . ' às ' . format_time($event['end_time']) . ".\nEscolha seu horário: " . $publicUrl;
 ?>
-<p><a href="<?= e(url('/admin')) ?>">← Voltar para a lista</a></p>
+<p class="back"><a href="<?= e(url('/admin')) ?>">Voltar para a lista de relógios</a></p>
 <h1><?= e(ucfirst(format_date_long($event['date']))) ?></h1>
-<p class="muted">Das <?= e(format_time($event['start_time'])) ?> às <?= e(format_time($event['end_time'])) ?> · <?= count($slots) ?> horários · <?= $total ?> inscrição(ões) · <?= $empty ?> horário(s) sem ninguém</p>
+<p class="lede">Das <?= e(format_time($event['start_time'])) ?> às <?= e(format_time($event['end_time'])) ?>. <?= $total ?> inscrição(ões) em <?= count($slots) ?> horários<?= $empty ? ', ' . $empty . ' ainda sem ninguém' : ', todos com participante' ?>.</p>
 
 <?php if ($message): ?>
 <div class="alert alert-success" role="status"><?= e($message) ?></div>
 <?php endif; ?>
 
-<section class="card">
+<section class="panel">
     <h2>Link para compartilhar</h2>
     <div class="copy-row">
         <label for="link-publico" class="visually-hidden">Link público</label>
@@ -26,8 +26,8 @@ $shareText = 'Relógio de Oração — ' . format_date_long($event['date']) . ',
     <p class="hint" data-copy-status role="status" aria-live="polite"></p>
 </section>
 
-<section class="card">
-    <div class="card-title-row">
+<section class="panel">
+    <div class="panel-title-row">
         <h2>Participantes por horário</h2>
         <a class="button button-primary" href="<?= e(url('/admin/eventos/' . $event['id'] . '/pdf')) ?>" download>Baixar PDF para imprimir</a>
     </div>

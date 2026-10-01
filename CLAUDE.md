@@ -35,7 +35,7 @@ Aplicação web da IEADIP (Patrocínio/MG) para inscrição em horários de ora�
 
 ## Como usar as skills de `.claude/skills` neste projeto
 
-**`frontend-design`** — vale como está para decisões visuais. A identidade já definida: azul-marinho `#1f3a5f`, dourado `#e0b04b`, fundo `#f6f3ee`, fonte do sistema. Mudanças grandes de visual devem ser propostas ao usuário antes.
+**`frontend-design`** — vale como está para decisões visuais. Identidade atual (tokens no `:root` de `style.css`): azul-marinho `#1f3a5f`, dourado `#e0b04b` ("lâmpada acesa" = horário com participante), fundo `#eef2f7`, fonte **Atkinson Hyperlegible** auto-hospedada em `public/assets/fonts` (OFL). Ideia central: a lista de horários é uma linha do tempo da vigília; é o único elemento com ênfase. Única animação: a lâmpada acendendo na confirmação. Mudanças grandes de visual devem ser propostas ao usuário antes.
 
 **`laravel-mobile-design`** — foi escrita para Laravel + Blade + Laravel Mix + Adminator. Aqui, aplique os **princípios** (mobile-first, toque ≥ 44px, acessibilidade, tokens) com estas traduções:
 
