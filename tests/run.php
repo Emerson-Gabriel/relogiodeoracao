@@ -9,7 +9,7 @@ declare(strict_types=1);
  *   temporário e percorre os fluxos de administração e inscrição pública.
  */
 
-require dirname(__DIR__) . '/src/functions.php';
+require_once dirname(__DIR__) . '/src/functions.php';
 
 $failures = 0;
 $count = 0;
@@ -64,10 +64,10 @@ echo "\nFluxos de ponta a ponta\n";
 $tmp = sys_get_temp_dir() . '/relogio-test-' . bin2hex(random_bytes(4));
 mkdir($tmp);
 
-function start_server(string $db, string $password = ''): array
+function start_server(string $db, string $password = '', array $extraEnv = []): array
 {
     $port = random_int(20000, 40000);
-    $env = array_merge(getenv(), ['RELOGIO_DB_PATH' => $db, 'RELOGIO_ADMIN_PASSWORD' => $password, 'RELOGIO_APP_URL' => '']);
+    $env = array_merge(getenv(), ['RELOGIO_DB_PATH' => $db, 'RELOGIO_ADMIN_PASSWORD' => $password, 'RELOGIO_APP_URL' => ''], $extraEnv);
     $root = dirname(__DIR__) . '/public';
     $proc = proc_open([PHP_BINARY, '-S', "127.0.0.1:{$port}", '-t', $root, $root . '/index.php'], [1 => ['file', '/dev/null', 'w'], 2 => ['file', '/dev/null', 'w']], $pipes, null, $env);
     for ($i = 0; $i < 50; $i++) {
@@ -80,9 +80,9 @@ function start_server(string $db, string $password = ''): array
 }
 
 /** Cliente HTTP mínimo com cookies. Retorna [status, headers, body]. */
-function http(string $method, string $url, array $form = [], array &$cookies = []): array
+function http(string $method, string $url, array $form = [], array &$cookies = [], array $extraHeaders = []): array
 {
-    $headers = [];
+    $headers = $extraHeaders;
     if ($cookies) {
         $headers[] = 'Cookie: ' . implode('; ', array_map(fn ($k, $v) => "{$k}={$v}", array_keys($cookies), $cookies));
     }
@@ -119,12 +119,24 @@ function csrf_from(string $html): string
     return $m[1] ?? '';
 }
 
-[$proc, $base] = start_server($tmp . '/db.sqlite');
+[$proc, $base] = start_server($tmp . '/db0.sqlite');
+try {
+    [$st, , $html] = http('GET', "$base/admin");
+    check($st === 503 && str_contains($html, 'Configure o código de acesso') && !str_contains($html, 'Cadastrar'), 'sem código configurado, o /admin fica bloqueado');
+    [$st] = http('POST', "$base/admin/eventos", ['data' => '2026-10-02', 'inicio' => '07:00', 'fim' => '10:00']);
+    check($st === 503, 'sem código configurado, não é possível cadastrar');
+} finally {
+    proc_terminate($proc);
+    proc_close($proc);
+}
+
+[$proc, $base] = start_server($tmp . '/db.sqlite', 'segredo123');
 try {
     $jar = [];
+    [, , $html] = http('GET', "$base/admin/entrar", [], $jar);
+    http('POST', "$base/admin/entrar", ['_csrf' => csrf_from($html), 'codigo' => 'segredo123'], $jar);
     [$st, , $html] = http('GET', "$base/admin", [], $jar);
-    check($st === 200 && str_contains($html, 'Cadastrar novo relógio'), '/admin abre sem login quando não há código configurado');
-    check(str_contains($html, 'esta área não está protegida'), '/admin avisa que está desprotegido');
+    check($st === 200 && str_contains($html, 'Cadastrar novo relógio'), 'admin entra com o código e vê o painel');
     $csrf = csrf_from($html);
 
     [$st, , $html] = http('POST', "$base/admin/eventos", ['_csrf' => $csrf, 'data' => '2026-10-02', 'inicio' => '07:00', 'fim' => '09:30'], $jar);
@@ -188,8 +200,8 @@ try {
     check(!preg_match('/\b[23]\s*(pessoas|inscri)/i', $html), 'página pública não mostra a quantidade de inscritos');
 
     [$st, , $html] = http('GET', $adminEventUrl, [], $jar);
-    check(substr_count($html, 'Maria Silva') === 1, 'reenvios repetidos não duplicaram a inscrição');
-    check(str_contains($html, 'João Pereira') && preg_match('#08:00 – 09:00</th>\s*<td>\s*<ol>\s*<li>Maria Silva</li>\s*<li>João Pereira</li>#', $html) === 1, 'admin vê as duas pessoas no mesmo horário, sem sobrescrita');
+    check(substr_count($html, '<span class="person">Maria Silva</span>') === 1, 'reenvios repetidos não duplicaram a inscrição');
+    check(str_contains($html, 'João Pereira') && preg_match('#08:00 – 09:00</th>.*?person">Maria Silva</span>.*?person">João Pereira</span>.*?</ol>#s', $html) === 1, 'admin vê as duas pessoas no mesmo horário, sem sobrescrita');
 
     // Inscrições simultâneas.
     [, , $html] = http('GET', $publicUrl);
@@ -205,7 +217,7 @@ try {
     [, , $html] = http('GET', $adminEventUrl, [], $jar);
     $ok = true;
     for ($i = 1; $i <= 10; $i++) {
-        $ok = $ok && str_contains($html, "<li>Pessoa {$i}</li>");
+        $ok = $ok && str_contains($html, "<span class=\"person\">Pessoa {$i}</span>");
     }
     check($ok, '10 inscrições simultâneas foram todas gravadas');
 
@@ -217,8 +229,66 @@ try {
     [$st, , $html] = http('GET', "$base/admin", [], $jar);
     check(str_contains($html, 'Sexta-feira, 2 de outubro de 2026') && str_contains($html, '13 inscrição(ões)'), 'admin lista as edições cadastradas');
 
+    // PDF para impressão.
+    [$st, $h, $body] = http('GET', $adminEventUrl . '/pdf', [], $jar);
+    check($st === 200 && header_value($h, 'Content-Type') === 'application/pdf' && str_starts_with($body, '%PDF-'), 'admin baixa o PDF da lista');
+    check(str_contains((string) header_value($h, 'Content-Disposition'), 'relogio-de-oracao-2026-10-02.pdf'), 'PDF tem nome de arquivo com a data');
+    [$st] = http('GET', $adminEventUrl . '/pdf');
+    check($st === 303, 'PDF exige estar logado no admin');
+
+    // Exclusão de inscrição pelo admin.
+    [, , $html] = http('GET', $adminEventUrl, [], $jar);
+    preg_match('#action="(/admin/inscricoes/(\d+)/excluir)"[^>]*data-confirm="Excluir a inscrição de João Pereira \(09:00\)#', $html, $m);
+    [$st] = http('POST', $base . $m[1], ['_csrf' => 'errado'], $jar);
+    check($st === 419, 'exclusão sem CSRF válido é recusada');
+    [$st] = http('POST', $base . $m[1], ['_csrf' => $csrf]);
+    check($st === 303 || $st === 302, 'exclusão sem estar logado não é feita');
+    [$st, , $html] = http('GET', $adminEventUrl, [], $jar);
+    check(str_contains($html, 'João Pereira (09:00)'), 'inscrição ainda existe após tentativas inválidas');
+    [$st] = http('POST', $base . $m[1], ['_csrf' => $csrf], $jar);
+    [, , $html] = http('GET', $adminEventUrl, [], $jar);
+    check($st === 303 && str_contains($html, 'excluída') && !str_contains($html, 'João Pereira (09:00)') && str_contains($html, 'João Pereira (08:00)'), 'admin exclui uma inscrição sem afetar as outras');
+    [, , $html] = http('GET', $publicUrl);
+    check(substr_count($html, '>Disponível<') === 1 && str_contains($html, 'id="h-0900"'), 'horário volta a ficar disponível após a exclusão');
+
     [$st, $h, $html] = http('GET', "$base/assets/style.css");
     check($st === 200, 'arquivos estáticos são servidos');
+} finally {
+    proc_terminate($proc);
+    proc_close($proc);
+}
+
+// Proteções contra abuso.
+[$proc, $base] = start_server($tmp . '/db3.sqlite', 'segredo123', ['RELOGIO_SIGNUP_LIMIT' => '3']);
+try {
+    $jar = [];
+    [, , $html] = http('GET', "$base/admin/entrar", [], $jar);
+    $csrf = csrf_from($html);
+    for ($i = 0; $i < 5; $i++) {
+        http('POST', "$base/admin/entrar", ['_csrf' => $csrf, 'codigo' => 'errado' . $i], $jar);
+    }
+    [$st] = http('POST', "$base/admin/entrar", ['_csrf' => $csrf, 'codigo' => 'segredo123'], $jar);
+    check($st === 429, 'após 5 códigos errados, o /admin bloqueia novas tentativas');
+
+    // Cria um evento direto no banco para testar a página pública.
+    putenv('RELOGIO_DB_PATH=' . $tmp . '/db3.sqlite');
+    require_once dirname(__DIR__) . '/src/bootstrap.php';
+    $ev = create_event('2026-10-02', '07:00', '09:00');
+    $pub = "$base/r/{$ev['public_token']}";
+
+    [$st] = http('POST', $pub, ['nome' => 'Ana Souza', 'horario' => '07:00', 'envio' => random_token(16)], $jar, ['Origin: https://site-malicioso.example']);
+    check($st === 403, 'inscrição enviada a partir de outro site é recusada');
+    [$st] = http('POST', $pub, ['nome' => 'Ana Souza', 'horario' => '07:00', 'envio' => random_token(16)], $jar, ['Origin: ' . $base]);
+    check($st === 303, 'inscrição com Origin do próprio site é aceita');
+    http('POST', $pub, ['nome' => 'Bia Souza', 'horario' => '07:00', 'envio' => random_token(16)]);
+    http('POST', $pub, ['nome' => 'Caio Souza', 'horario' => '07:00', 'envio' => random_token(16)]);
+    [$st] = http('POST', $pub, ['nome' => 'Davi Souza', 'horario' => '07:00', 'envio' => random_token(16)]);
+    check($st === 429, 'excesso de inscrições da mesma conexão é bloqueado');
+
+    [, $h] = http('GET', $pub);
+    check(header_value($h, 'X-Frame-Options') === 'DENY' && str_contains((string) header_value($h, 'Content-Security-Policy'), "script-src 'self'"), 'cabeçalhos de segurança presentes');
+    [$st, , $html] = http('GET', "$base/r/../../config.php");
+    check($st === 404 && !str_contains($html, 'admin_password'), 'tentativa de acessar arquivos por ../ não funciona');
 } finally {
     proc_terminate($proc);
     proc_close($proc);

@@ -1,4 +1,4 @@
-<section class="card narrow">
+<section class="panel narrow">
     <h1>Administração</h1>
 <?php if ($error): ?>
     <div class="alert alert-error" role="alert"><?= e($error) ?></div>

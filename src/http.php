@@ -54,6 +54,13 @@ function absolute_url(string $path): string
     return ($https ? 'https' : 'http') . '://' . ($_SERVER['HTTP_HOST'] ?? 'localhost') . url($path);
 }
 
+/** URL da logo (com versão para atualizar o cache ao trocar o arquivo), ou null. */
+function logo_url(): ?string
+{
+    $logo = logo_file();
+    return $logo ? url('/img/' . basename($logo)) . '?v=' . filemtime($logo) : null;
+}
+
 function e(?string $value): string
 {
     return htmlspecialchars((string) $value, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
@@ -96,11 +103,28 @@ function redirect(string $path): never
     exit;
 }
 
+/**
+ * Recusa envios de formulário feitos a partir de outros sites. Navegadores
+ * informam a origem no cabeçalho Origin; sem ele (navegadores antigos), aceita.
+ */
+function same_origin_request(): bool
+{
+    $origin = $_SERVER['HTTP_ORIGIN'] ?? '';
+    if ($origin === '' || $origin === 'null') {
+        return true;
+    }
+    return strcasecmp((string) parse_url($origin, PHP_URL_HOST) . (parse_url($origin, PHP_URL_PORT) ? ':' . parse_url($origin, PHP_URL_PORT) : ''), (string) ($_SERVER['HTTP_HOST'] ?? '')) === 0;
+}
+
 function send_security_headers(): void
 {
     header('X-Content-Type-Options: nosniff');
     header('X-Frame-Options: DENY');
     header('Referrer-Policy: no-referrer');
+    header('Permissions-Policy: camera=(), microphone=(), geolocation=()');
+    if (($_SERVER['HTTPS'] ?? '') === 'on') {
+        header('Strict-Transport-Security: max-age=31536000');
+    }
     header("Content-Security-Policy: default-src 'self'; img-src 'self' data:; style-src 'self'; script-src 'self'; form-action 'self'; frame-ancestors 'none'; base-uri 'none'");
 }
 
@@ -168,14 +192,14 @@ function admin_password_enabled(): bool
 
 function admin_is_authenticated(): bool
 {
-    return !admin_password_enabled() || !empty($_SESSION['admin']);
+    return admin_password_enabled() && !empty($_SESSION['admin']);
 }
 
 function check_admin_password(string $attempt): bool
 {
     $expected = (string) config('admin_password', '');
     if ($expected === '') {
-        return true;
+        return false;
     }
     // Aceita tanto texto puro quanto um hash gerado por password_hash().
     if (str_starts_with($expected, '$2y$') || str_starts_with($expected, '$argon2')) {

@@ -15,7 +15,7 @@ A especificação completa está em [`docs/ESPECIFICACAO.md`](docs/ESPECIFICACAO
 | Backend | **PHP 8.1+ puro, sem framework** | O escopo é de 3 telas e 2 tabelas. O Laravel traria Composer, centenas de dependências, `artisan`, cache e atualizações periódicas, sem ganho real aqui. PHP puro roda em qualquer hospedagem compartilhada barata (Hostinger, Locaweb, HostGator etc.) só copiando os arquivos. |
 | Banco | **SQLite** (arquivo `data/relogio.sqlite`) | Não exige servidor de banco, é criado automaticamente na primeira execução e o backup é copiar um arquivo. O volume (dezenas de inscrições por semana) está muito abaixo do limite do SQLite. O modo WAL e o `busy_timeout` tornam as gravações simultâneas seguras. |
 | Frontend | **HTML renderizado no servidor + CSS próprio + ~60 linhas de JS opcional** | Carrega rápido no navegador do WhatsApp, funciona até sem JavaScript, e não precisa de build (npm, Vite, React). O JS só melhora a experiência: impede duplo clique e copia o link. |
-| Dependências | **Nenhuma** | Só as extensões `pdo_sqlite` e `mbstring`, que vêm habilitadas em praticamente toda hospedagem PHP. |
+| Dependências | **Nenhuma externa** (a FPDF, para o PDF, vem incluída no projeto) | Só as extensões `pdo_sqlite` e `mbstring`, que vêm habilitadas em praticamente toda hospedagem PHP. |
 
 ### Regras de comportamento adotadas
 
@@ -28,11 +28,9 @@ A especificação completa está em [`docs/ESPECIFICACAO.md`](docs/ESPECIFICACAO
 - **Concorrência:** inscrições são apenas `INSERT`, sem ler, alterar e gravar de volta, então nunca sobrescrevem outra. O teste automatizado dispara 10 inscrições simultâneas.
 - **Privacidade:** o HTML público recebe apenas a lista de horários ocupados, sem nomes, contagem ou qualquer outro dado, nem mesmo escondidos. A página de confirmação mostra o nome da própria pessoa, e seu endereço contém um código aleatório que só quem se inscreveu conhece. As páginas levam `noindex` para não aparecer no Google.
 
-## ⚠️ Segurança da área `/admin`
+## Segurança da área `/admin`
 
-Por padrão, conforme a especificação, **o `/admin` não pede login**. Isso significa que **qualquer pessoa que descobrir o endereço `/admin` consegue ver os nomes de todos os inscritos e cadastrar relógios**. A própria tela do admin mostra esse aviso enquanto a área estiver aberta.
-
-**Recomendação:** antes de publicar na internet, defina um **código de acesso**. É uma única senha compartilhada pela organização, sem cadastro de usuários:
+A especificação previa um `/admin` sem login. Isso deixaria os nomes de todos os inscritos visíveis para qualquer pessoa que descobrisse o endereço. Por isso a aplicação usa um **código de acesso**: uma única senha compartilhada pela organização, sem cadastro de usuários. **Enquanto o código não for configurado, o `/admin` fica bloqueado** e mostra instruções. Assim, esquecer o `config.php` nunca deixa os nomes expostos.
 
 ```php
 // config.php
@@ -44,17 +42,42 @@ return [
 Com o código definido, o `/admin` pede o código uma vez por sessão do navegador. Também é possível guardar um hash no lugar do texto puro:
 `php -r "echo password_hash('seu-codigo', PASSWORD_DEFAULT);"`.
 
-Outras proteções já incluídas: CSRF nos formulários do admin, cabeçalhos de segurança (CSP, `X-Frame-Options`), escape de todo conteúdo exibido, e bloqueio do acesso direto a `data/`, `src/` e `config.php`. Use **HTTPS** na hospedagem.
+### Proteções contra invasão e abuso
+
+- **Não existe upload de arquivos.** A aplicação só recebe texto (nome, horário, data), então não há como enviar um script por ela.
+- **Nenhum outro PHP é executado:** o `.htaccess` recusa (403) qualquer `.php` que não seja o `index.php`, mesmo que alguém consiga colocar um arquivo na pasta.
+- **Banco, configuração e código inacessíveis pela web:** `data/`, `src/`, `config.php`, `tests/`, `.git` e arquivos ocultos ficam fora da raiz pública ou bloqueados pelo `.htaccess`. Isso foi testado num Apache real, nos dois modos de instalação.
+- **Injeção de SQL:** todas as consultas usam parâmetros (PDO com prepared statements).
+- **XSS:** tudo que é exibido é escapado, e a CSP só permite scripts do próprio site.
+- **Força bruta no código de acesso:** 5 tentativas erradas bloqueiam aquela conexão por 15 minutos.
+- **Spam de inscrições:** limite de 40 inscrições por conexão a cada 10 minutos, ajustável em `signup_limit`. O limite é alto porque muitos podem usar o mesmo Wi-Fi da igreja.
+- **Formulários enviados de outros sites** são recusados, e os formulários do admin têm CSRF.
+- **Erros do PHP não aparecem ao visitante;** vão só para o log do servidor.
+- Cabeçalhos de segurança: CSP, `X-Frame-Options`, `Referrer-Policy`, `Permissions-Policy` e HSTS com HTTPS.
+
+**O que depende de você (maior risco real):** senha forte e 2FA no cPanel/HostGator, não compartilhar acesso FTP, manter o PHP atualizado no MultiPHP Manager e usar HTTPS.
+
+## Excluir inscrições
+
+Na tela de cada relógio no admin, cada nome tem o link **excluir**, para remover inscrições falsas ou duplicadas. O sistema pede confirmação antes de apagar. Se o horário ficar vazio, ele volta a aparecer como **Disponível** na página pública.
+
+## PDF para impressão
+
+Na tela de cada relógio no admin, o botão **Baixar PDF para imprimir** gera um A4 com cabeçalho da igreja, data, horários e participantes. Horários com mais de 3 nomes usam duas colunas, e horários vazios aparecem destacados. O PDF é gerado pela biblioteca [FPDF](http://www.fpdf.org), que está incluída em `src/lib/fpdf` (um único arquivo PHP com licença livre, sem Composer).
+
+## Logo da igreja
+
+A logo fica em `public/img/logo.png`. Para trocar, substitua o arquivo mantendo o mesmo nome. Use de preferência um PNG quadrado com fundo transparente, não entrelaçado; `public/img/logo.jpg` também é aceito se não houver o PNG. Ela aparece automaticamente no topo das páginas e no PDF.
 
 ## Como executar localmente
 
 Requisitos: PHP 8.1 ou superior com `pdo_sqlite` e `mbstring`.
 
 ```bash
-php -S localhost:8000 -t public public/index.php
+RELOGIO_ADMIN_PASSWORD=teste php -S localhost:8000 -t public public/index.php
 ```
 
-- Administração: http://localhost:8000/admin
+- Administração: http://localhost:8000/admin (código: `teste`)
 - O banco `data/relogio.sqlite` é criado automaticamente.
 
 ## Testes
@@ -65,7 +88,16 @@ php tests/run.php
 
 O script roda testes das regras (blocos, validações) e testes de ponta a ponta. Ele sobe o servidor com um banco temporário e verifica cadastro, link público, inscrição, várias pessoas no mesmo horário, duplo envio, concorrência, ausência de nomes no HTML público e o código de acesso. Os testes cobrem os critérios de aceite da especificação.
 
-## Publicação (hospedagem compartilhada com Apache)
+## Publicação na HostGator — `oracao.omnibyte.com.br`
+
+1. cPanel → **MultiPHP Manager**: PHP **8.1 ou mais novo** para o subdomínio.
+2. cPanel → **Domínios → Criar domínio**: `oracao.omnibyte.com.br`, com **Document Root** = `relogiodeoracao/public`.
+3. Envie o projeto (ZIP do GitHub → Gerenciador de Arquivos → Extrair) para `/home/<usuario>/relogiodeoracao`.
+4. Copie `config.example.php` para `config.php` e defina `admin_password` (o `app_url` já vem com `https://oracao.omnibyte.com.br`).
+5. cPanel → **SSL/TLS Status** → **Run AutoSSL** para ativar o HTTPS.
+6. Teste: `https://oracao.omnibyte.com.br/admin`.
+
+## Publicação (hospedagem compartilhada com Apache, genérica)
 
 1. Envie todos os arquivos do projeto para a hospedagem.
 2. Aponte a **raiz do site para a pasta `public/`** (recomendado). Se o painel não permitir, deixe na raiz: o `.htaccess` da raiz redireciona para `public/` e bloqueia as pastas internas.

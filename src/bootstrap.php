@@ -1,10 +1,15 @@
 <?php
 declare(strict_types=1);
 
+// Nunca mostrar erros do PHP ao visitante (revelariam caminhos e detalhes do servidor).
+ini_set('display_errors', '0');
+ini_set('log_errors', '1');
+ini_set('expose_php', '0');
+
 date_default_timezone_set('America/Sao_Paulo');
 mb_internal_encoding('UTF-8');
 
-require __DIR__ . '/functions.php';
+require_once __DIR__ . '/functions.php';
 
 /*
  * Configuração: config.php (opcional) na raiz do projeto, com fallback para
@@ -69,7 +74,25 @@ function migrate(PDO $pdo): void
             created_at       TEXT NOT NULL
         );
         CREATE INDEX IF NOT EXISTS signups_event_slot ON signups(event_id, slot_start);
+        CREATE TABLE IF NOT EXISTS attempts (
+            action     TEXT NOT NULL,            -- 'signup' ou 'login'
+            client     TEXT NOT NULL,            -- hash do IP (não guardamos o IP)
+            created_at INTEGER NOT NULL          -- timestamp Unix
+        );
+        CREATE INDEX IF NOT EXISTS attempts_lookup ON attempts(action, client, created_at);
         SQL);
+}
+
+/** Caminho da logo da igreja, se existir (public/img/logo.png ou logo.jpg). */
+function logo_file(): ?string
+{
+    foreach (['logo.png', 'logo.jpg'] as $name) {
+        $path = dirname(__DIR__) . '/public/img/' . $name;
+        if (is_file($path)) {
+            return $path;
+        }
+    }
+    return null;
 }
 
 function now(): string
@@ -125,7 +148,7 @@ function occupied_slots(int $eventId): array
 /** Para a área administrativa: nomes agrupados por bloco. */
 function signups_by_slot(int $eventId): array
 {
-    $stmt = db()->prepare('SELECT slot_start, name, created_at FROM signups WHERE event_id = ? ORDER BY slot_start, id');
+    $stmt = db()->prepare('SELECT id, slot_start, name, created_at FROM signups WHERE event_id = ? ORDER BY slot_start, id');
     $stmt->execute([$eventId]);
     $out = [];
     foreach ($stmt->fetchAll() as $row) {
@@ -148,9 +171,46 @@ function create_signup(int $eventId, string $slotStart, string $name, string $su
     $stmt->execute([$eventId, $slotStart, $name, $submissionToken, now()]);
 }
 
+function find_signup_by_id(int $id): ?array
+{
+    $stmt = db()->prepare('SELECT * FROM signups WHERE id = ?');
+    $stmt->execute([$id]);
+    return $stmt->fetch() ?: null;
+}
+
+function delete_signup(int $id): void
+{
+    db()->prepare('DELETE FROM signups WHERE id = ?')->execute([$id]);
+}
+
 function find_signup_by_submission(int $eventId, string $submissionToken): ?array
 {
     $stmt = db()->prepare('SELECT * FROM signups WHERE event_id = ? AND submission_token = ?');
     $stmt->execute([$eventId, $submissionToken]);
     return $stmt->fetch() ?: null;
+}
+
+// ---------------------------------------------------------------------------
+// Limite de tentativas por conexão (contra spam de inscrições e força bruta)
+// ---------------------------------------------------------------------------
+
+function client_key(): string
+{
+    return hash('sha256', 'relogio|' . ($_SERVER['REMOTE_ADDR'] ?? ''));
+}
+
+function attempts_exceeded(string $action, int $max, int $windowSeconds): bool
+{
+    $stmt = db()->prepare('SELECT COUNT(*) FROM attempts WHERE action = ? AND client = ? AND created_at > ?');
+    $stmt->execute([$action, client_key(), time() - $windowSeconds]);
+    return (int) $stmt->fetchColumn() >= $max;
+}
+
+function record_attempt(string $action): void
+{
+    db()->prepare('INSERT INTO attempts (action, client, created_at) VALUES (?, ?, ?)')
+        ->execute([$action, client_key(), time()]);
+    if (random_int(1, 50) === 1) {
+        db()->prepare('DELETE FROM attempts WHERE created_at < ?')->execute([time() - 86400]);
+    }
 }
