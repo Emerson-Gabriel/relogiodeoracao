@@ -164,6 +164,17 @@ function admin_route(string $method, string $path): void
         flash('Inscrição de “' . $signup['name'] . '” (' . $signup['slot_start'] . ') excluída.');
         redirect('/admin/eventos/' . $signup['event_id']);
     }
+    if (preg_match('#^/admin/eventos/(\d+)/pdf$#', $path, $m) && $method === 'GET') {
+        $event = find_event_by_id((int) $m[1]) ?? not_found();
+        require_once dirname(__DIR__) . '/src/pdf.php';
+        $pdf = event_pdf($event, generate_slots($event['start_time'], $event['end_time']), signups_by_slot((int) $event['id']));
+        header('Content-Type: application/pdf');
+        header('Content-Disposition: attachment; filename="relogio-de-oracao-' . $event['date'] . '.pdf"');
+        header('Content-Length: ' . strlen($pdf));
+        header('Cache-Control: no-store');
+        echo $pdf;
+        return;
+    }
     if (preg_match('#^/admin/eventos/(\d+)$#', $path, $m) && $method === 'GET') {
         $event = find_event_by_id((int) $m[1]) ?? not_found();
         render('admin_event', [

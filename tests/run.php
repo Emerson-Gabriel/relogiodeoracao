@@ -229,6 +229,13 @@ try {
     [$st, , $html] = http('GET', "$base/admin", [], $jar);
     check(str_contains($html, 'Sexta-feira, 2 de outubro de 2026') && str_contains($html, '13 inscrição(ões)'), 'admin lista as edições cadastradas');
 
+    // PDF para impressão.
+    [$st, $h, $body] = http('GET', $adminEventUrl . '/pdf', [], $jar);
+    check($st === 200 && header_value($h, 'Content-Type') === 'application/pdf' && str_starts_with($body, '%PDF-'), 'admin baixa o PDF da lista');
+    check(str_contains((string) header_value($h, 'Content-Disposition'), 'relogio-de-oracao-2026-10-02.pdf'), 'PDF tem nome de arquivo com a data');
+    [$st] = http('GET', $adminEventUrl . '/pdf');
+    check($st === 303, 'PDF exige estar logado no admin');
+
     // Exclusão de inscrição pelo admin.
     [, , $html] = http('GET', $adminEventUrl, [], $jar);
     preg_match('#action="(/admin/inscricoes/(\d+)/excluir)"[^>]*data-confirm="Excluir a inscrição de João Pereira \(09:00\)#', $html, $m);

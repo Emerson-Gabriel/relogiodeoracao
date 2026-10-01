@@ -83,6 +83,18 @@ function migrate(PDO $pdo): void
         SQL);
 }
 
+/** Caminho da logo da igreja, se existir (PNG ou JPG em public/assets). */
+function logo_file(): ?string
+{
+    foreach (['logo.png', 'logo.jpg'] as $name) {
+        $path = dirname(__DIR__) . '/public/assets/' . $name;
+        if (is_file($path)) {
+            return $path;
+        }
+    }
+    return null;
+}
+
 function now(): string
 {
     return (new DateTimeImmutable('now'))->format('Y-m-d\TH:i:sP');

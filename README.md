@@ -15,7 +15,7 @@ A especificação completa está em [`docs/ESPECIFICACAO.md`](docs/ESPECIFICACAO
 | Backend | **PHP 8.1+ puro, sem framework** | O escopo é de 3 telas e 2 tabelas. O Laravel traria Composer, centenas de dependências, `artisan`, cache e atualizações periódicas, sem ganho real aqui. PHP puro roda em qualquer hospedagem compartilhada barata (Hostinger, Locaweb, HostGator etc.) só copiando os arquivos. |
 | Banco | **SQLite** (arquivo `data/relogio.sqlite`) | Não exige servidor de banco, é criado automaticamente na primeira execução e o backup é copiar um arquivo. O volume (dezenas de inscrições por semana) está muito abaixo do limite do SQLite. O modo WAL e o `busy_timeout` tornam as gravações simultâneas seguras. |
 | Frontend | **HTML renderizado no servidor + CSS próprio + ~60 linhas de JS opcional** | Carrega rápido no navegador do WhatsApp, funciona até sem JavaScript, e não precisa de build (npm, Vite, React). O JS só melhora a experiência: impede duplo clique e copia o link. |
-| Dependências | **Nenhuma** | Só as extensões `pdo_sqlite` e `mbstring`, que vêm habilitadas em praticamente toda hospedagem PHP. |
+| Dependências | **Nenhuma externa** (a FPDF, para o PDF, vem incluída no projeto) | Só as extensões `pdo_sqlite` e `mbstring`, que vêm habilitadas em praticamente toda hospedagem PHP. |
 
 ### Regras de comportamento adotadas
 
@@ -60,6 +60,14 @@ Com o código definido, o `/admin` pede o código uma vez por sessão do navegad
 ## Excluir inscrições
 
 Na tela de cada relógio no admin, cada nome tem o link **excluir**, para remover inscrições falsas ou duplicadas. O sistema pede confirmação antes de apagar. Se o horário ficar vazio, ele volta a aparecer como **Disponível** na página pública.
+
+## PDF para impressão
+
+Na tela de cada relógio no admin, o botão **Baixar PDF para imprimir** gera um A4 com cabeçalho da igreja, data, horários e participantes. Horários com mais de 3 nomes usam duas colunas, e horários vazios aparecem destacados. O PDF é gerado pela biblioteca [FPDF](http://www.fpdf.org), que está incluída em `src/lib/fpdf` (um único arquivo PHP com licença livre, sem Composer).
+
+## Logo da igreja
+
+Coloque a logo em `public/assets/logo.png` (de preferência PNG com fundo transparente, não entrelaçado) ou `public/assets/logo.jpg`. Ela aparece automaticamente no topo das páginas e no PDF.
 
 ## Como executar localmente
 

@@ -27,7 +27,10 @@ $shareText = 'Relógio de Oração — ' . format_date_long($event['date']) . ',
 </section>
 
 <section class="card">
-    <h2>Participantes por horário</h2>
+    <div class="card-title-row">
+        <h2>Participantes por horário</h2>
+        <a class="button button-primary" href="<?= e(url('/admin/eventos/' . $event['id'] . '/pdf')) ?>" download>Baixar PDF para imprimir</a>
+    </div>
     <table class="signups">
         <thead>
             <tr><th scope="col">Horário</th><th scope="col">Participantes</th></tr>

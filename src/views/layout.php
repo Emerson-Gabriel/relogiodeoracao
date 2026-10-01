@@ -17,7 +17,12 @@
     <a class="skip-link" href="#conteudo">Pular para o conteúdo</a>
     <header class="site-header">
         <div class="container">
-            <p class="church">IEADIP · Assembleia de Deus Madureira · Patrocínio/MG</p>
+            <div class="brand">
+<?php if ($logo = logo_file()): ?>
+                <img src="<?= e(asset(basename($logo))) ?>" alt="" class="brand-logo" width="44" height="44">
+<?php endif; ?>
+                <p class="church">IEADIP · Assembleia de Deus Madureira · Patrocínio/MG</p>
+            </div>
 <?php if (!empty($admin)): ?>
             <nav class="admin-nav" aria-label="Administração">
                 <a href="<?= e(url('/admin')) ?>">Relógios cadastrados</a>
