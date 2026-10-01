@@ -3,6 +3,9 @@
 $selected = $old['horario'] ?? '';
 ?>
 <section class="event-header">
+<?php if ($logo = logo_url()): ?>
+    <img src="<?= e($logo) ?>" alt="Logo da IEADIP" class="hero-logo" width="96" height="96">
+<?php endif; ?>
     <h1>Relógio de Oração</h1>
     <p class="event-date"><?= e(ucfirst(format_date_long($event['date']))) ?></p>
     <p class="event-time">Das <?= e(format_time($event['start_time'])) ?> às <?= e(format_time($event['end_time'])) ?> · cada horário dura 1 hora</p>

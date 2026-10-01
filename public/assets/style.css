@@ -68,7 +68,7 @@ code { font-size: .9em; background: rgba(0,0,0,.06); padding: .05em .3em; border
 .site-header { background: var(--primary); color: var(--on-primary); padding: .75rem 0; }
 .site-header .container { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: .5rem 1rem; }
 .brand { display: flex; align-items: center; gap: .75rem; }
-.brand-logo { width: 44px; height: 44px; object-fit: contain; flex: none; background: #fff; border-radius: 50%; padding: 3px; }
+.brand-logo { width: 44px; height: 44px; object-fit: contain; flex: none; }
 .church { margin: 0; font-size: .875rem; letter-spacing: .01em; opacity: .95; }
 .admin-nav { display: flex; gap: 1rem; align-items: center; font-size: .9375rem; }
 .admin-nav a, .admin-nav .link-button { color: var(--on-primary); }
@@ -139,6 +139,7 @@ form.inline { display: inline; }
 
 /* Página pública */
 .event-header { text-align: center; margin-bottom: 1.25rem; }
+.hero-logo { display: block; width: 96px; height: 96px; margin: 0 auto .75rem; object-fit: contain; }
 .event-date { font-size: 1.25rem; font-weight: 600; margin: 0; }
 .event-time { color: var(--muted); margin: .25rem 0 0; }
 

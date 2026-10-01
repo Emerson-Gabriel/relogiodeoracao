@@ -54,6 +54,13 @@ function absolute_url(string $path): string
     return ($https ? 'https' : 'http') . '://' . ($_SERVER['HTTP_HOST'] ?? 'localhost') . url($path);
 }
 
+/** URL da logo (com versão para atualizar o cache ao trocar o arquivo), ou null. */
+function logo_url(): ?string
+{
+    $logo = logo_file();
+    return $logo ? url('/img/' . basename($logo)) . '?v=' . filemtime($logo) : null;
+}
+
 function e(?string $value): string
 {
     return htmlspecialchars((string) $value, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');

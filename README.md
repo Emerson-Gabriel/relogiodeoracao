@@ -67,7 +67,7 @@ Na tela de cada relógio no admin, o botão **Baixar PDF para imprimir** gera um
 
 ## Logo da igreja
 
-Coloque a logo em `public/assets/logo.png` (de preferência PNG com fundo transparente, não entrelaçado) ou `public/assets/logo.jpg`. Ela aparece automaticamente no topo das páginas e no PDF.
+A logo fica em `public/img/logo.png`. Para trocar, substitua o arquivo mantendo o mesmo nome. Use de preferência um PNG quadrado com fundo transparente, não entrelaçado; `public/img/logo.jpg` também é aceito se não houver o PNG. Ela aparece automaticamente no topo das páginas e no PDF.
 
 ## Como executar localmente
 

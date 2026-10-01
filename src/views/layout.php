@@ -9,7 +9,12 @@
 <?php endif; ?>
     <meta name="description" content="Relógio de Oração — IEADIP, Assembleia de Deus Madureira em Patrocínio/MG">
     <meta name="theme-color" content="#1f3a5f">
+<?php if (logo_url()): ?>
+    <link rel="icon" href="<?= e(logo_url()) ?>" type="image/png">
+    <link rel="apple-touch-icon" href="<?= e(logo_url()) ?>">
+<?php else: ?>
     <link rel="icon" href="<?= e(asset('icon.svg')) ?>" type="image/svg+xml">
+<?php endif; ?>
     <link rel="stylesheet" href="<?= e(asset('style.css')) ?>">
     <script src="<?= e(asset('app.js')) ?>" defer></script>
 </head>
@@ -18,8 +23,8 @@
     <header class="site-header">
         <div class="container">
             <div class="brand">
-<?php if ($logo = logo_file()): ?>
-                <img src="<?= e(asset(basename($logo))) ?>" alt="" class="brand-logo" width="44" height="44">
+<?php if ($logo = logo_url()): ?>
+                <img src="<?= e($logo) ?>" alt="" class="brand-logo" width="44" height="44">
 <?php endif; ?>
                 <p class="church">IEADIP · Assembleia de Deus Madureira · Patrocínio/MG</p>
             </div>
