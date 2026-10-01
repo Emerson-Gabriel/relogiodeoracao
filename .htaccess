@@ -5,7 +5,7 @@ Options -Indexes
     RewriteEngine On
     RewriteRule (^|/)\. - [F,L]
     RewriteRule ^(src|data|tests|docs)(/|$) - [F,L]
-    RewriteRule ^(README\.md|\.gitignore)$ - [F,L]
+    RewriteRule ^(README\.md|CLAUDE\.md|\.gitignore)$ - [F,L]
     RewriteRule ^config(\.example)?\.php$ - [F,L]
     RewriteRule ^(?!public/)(.*)$ public/$1 [L]
 </IfModule>
